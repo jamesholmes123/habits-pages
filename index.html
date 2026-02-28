@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Life Planner V6 - Modern Edition</title>
+    <!-- FONT PLUS JAKARTA SANS -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- CHART.JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* --- CSS VARIABLES & THEME --- */
+        :root {
+            /* Palette: Deep Slate & Soft Emerald */
+            --primary: #34d399; /* Emerald 400 - Fresh & Modern */
+            --primary-glow: rgba(52, 211, 153, 0.25);
+            --secondary: #fbbf24; /* Amber 400 */
+            --gold: #fcd34d;
+            --bg-dark: #0f172a; /* Slate 900 */
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); /* Deep Blue/Purple Mix */
+            --bg-card: rgba(30, 41, 59, 0.7); /* Slate 800 with opacity */
+            --bg-card-hover: rgba(30, 41, 59, 0.9);
+            --text-main: #f1f5f9; /* Slate 100 */
+            --text-muted: #94a3b8; /* Slate 400 */
+            --border: rgba(255, 255, 255, 0.08);
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+            --radius: 16px;
+            --font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+        body {
+            font-family: var(--font-family);
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* --- SCROLLBAR CUSTOM --- */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        /* --- SIDEBAR (Glassmorphism) --- */
+        aside {
+            width: 280px;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            padding: 30px 20px;
+            z-index: 20;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .brand {
+            font-size: 1.25rem; font-weight: 800; color: var(--text-main);
+            margin-bottom: 40px; display: flex; align-items: center; gap: 12px;
+            letter-spacing: -0.02em;
+        }
+        .brand svg { color: var(--primary); filter: drop-shadow(0 0 8px var(--primary-glow)); }
+
+        nav { display: flex; flex-direction: column; gap: 8px; }
+        nav button {
+            background: transparent; border: none; color: var(--text-muted);
+            width: 100%; padding: 12px 16px; text-align: left; cursor: pointer;
+            border-radius: 12px; font-size: 0.95rem; font-weight: 500;
+            display: flex; align-items: center; gap: 12px;
+            transition: all 0.2s ease;
+        }
+        nav button:hover { background: rgba(255,255,255,0.03); color: var(--text-main); transform: translateX(4px); }
+        nav button.active {
+            background: var(--primary-glow);
+            color: var(--primary);
+            font-weight: 600;
+            box-shadow: 0 0 15px rgba(52, 211, 153, 0.1);
+        }
+        nav button span { font-size: 1.1rem; }
+
+        /* --- MAIN CONTENT --- */
+        main { flex: 1; padding: 40px; overflow-y: auto; position: relative; }
+        header { margin-bottom: 30px; }
+        h1 { font-size: 2rem; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.03em; background: linear-gradient(to right, #fff, #cbd5e1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        p.subtitle { color: var(--text-muted); font-size: 1rem; font-weight: 400; }
+
+        .section { display: none; animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        .section.active { display: block; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- COMPONENTS --- */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: var(--radius);
+            padding: 24px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 24px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover { box-shadow: var(--shadow-lg); }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; }
+        .grid-chart { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; }
+
+        /* Stat Boxes */
+        .streak-box {
+            background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+            color: white; text-align: center; padding: 24px; border-radius: var(--radius);
+            box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.4);
+            position: relative; overflow: hidden;
+        }
+        .streak-box::after {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 60%);
+            opacity: 0.5;
+        }
+        .streak-number { font-size: 3rem; font-weight: 800; line-height: 1; position: relative; z-index: 2; }
+        
+        .stat-box { 
+            background: rgba(15, 23, 42, 0.4); padding: 20px; border-radius: var(--radius); 
+            border: 1px solid var(--border); text-align: center; transition: border-color 0.2s;
+        }
+        .stat-box:hover { border-color: var(--primary); }
+        .stat-box h3 { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+        .stat-box p { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; }
+
+        /* Buttons & Inputs */
+        .btn {
+            background-color: var(--primary); color: #0f172a; border: none;
+            padding: 12px 24px; border-radius: 10px; cursor: pointer; font-weight: 700;
+            font-size: 0.95rem; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .btn:hover { background-color: #6ee7b7; transform: translateY(-1px); box-shadow: 0 10px 15px -3px rgba(52, 211, 153, 0.3); }
+
+        input, select, textarea {
+            width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border);
+            color: var(--text-main); padding: 12px 16px; border-radius: 10px; margin-bottom: 12px; 
+            font-family: var(--font-family); font-size: 0.95rem; transition: all 0.2s;
+        }
+        input:focus, select:focus, textarea:focus { 
+            outline: none; border-color: var(--primary); 
+            background: rgba(15, 23, 42, 0.8); box-shadow: 0 0 0 3px var(--primary-glow); 
+        }
+
+        /* --- ROADMAP (Timeline) --- */
+        .timeline-item { 
+            display: flex; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border); 
+            transition: background 0.2s; 
+        }
+        .timeline-item:last-child { border-bottom: none; }
+        .timeline-item:hover { padding-left: 8px; }
+        .time { 
+            font-weight: 700; color: var(--secondary); width: 100px; flex-shrink: 0; font-size: 0.9rem; letter-spacing: 0.05em;
+        }
+        .activity { flex: 1; font-weight: 500; font-size: 1rem; color: var(--text-main); }
+        .check-circle {
+            width: 24px; height: 24px; border: 2px solid var(--text-muted); border-radius: 8px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); flex-shrink: 0;
+        }
+        .check-circle.checked { 
+            background-color: var(--primary); border-color: var(--primary); 
+            color: #0f172a; transform: scale(1.1); box-shadow: 0 0 10px var(--primary-glow); 
+        }
+
+        /* --- HABIT TRACKER --- */
+        .habit-filter {
+            display: flex; gap: 16px; margin-bottom: 24px; align-items: center;
+            background: rgba(15, 23, 42, 0.4); padding: 12px; border-radius: 12px; border: 1px solid var(--border);
+        }
+        .habit-filter select { margin-bottom: 0; width: auto; min-width: 140px; background: transparent; border: none; font-weight: 600; font-size: 1rem; }
+
+        .habit-grid { width: 100%; border-collapse: separate; border-spacing: 4px; font-size: 0.8rem; }
+        .habit-grid th, .habit-grid td { 
+            padding: 8px; text-align: center; border: none; height: 32px; border-radius: 6px;
+        }
+        .habit-grid th:first-child, .habit-grid td:first-child { 
+            text-align: left; position: sticky; left: 0; background: var(--bg-card); z-index: 2; min-width: 110px; font-weight: 600; 
+        }
+        .habit-cell { 
+            width: 100%; height: 100%; display: block; border-radius: 4px; background: rgba(255,255,255,0.03); transition: background 0.2s;
+        }
+        .habit-cell.done { background: var(--primary); box-shadow: 0 0 8px var(--primary-glow); }
+        .habit-cell { cursor: not-allowed; }
+
+        /* --- EVALUATION --- */
+        .eval-tabs { display: flex; gap: 10px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+        .eval-tab {
+            background: transparent; border: none; color: var(--text-muted);
+            padding: 10px 20px; cursor: pointer; border-radius: 8px; font-weight: 600;
+            white-space: nowrap; transition: all 0.2s; font-size: 0.9rem;
+        }
+        .eval-tab:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
+        .eval-tab.active { background: var(--primary-glow); color: var(--primary); }
+
+        .insight-card {
+            background: linear-gradient(to right, rgba(52, 211, 153, 0.1), transparent);
+            border: 1px solid rgba(52, 211, 153, 0.2);
+        }
+
+        /* --- JUZ --- */
+        .juz-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 12px; }
+        .juz-card {
+            background: rgba(15, 23, 42, 0.6); padding: 16px; border-radius: 12px; text-align: center;
+            border: 1px solid var(--border); cursor: pointer; transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); user-select: none;
+        }
+        .juz-card:hover { transform: translateY(-3px); border-color: var(--text-muted); }
+        .juz-card.done { 
+            border-color: var(--primary); background: rgba(52, 211, 153, 0.1); color: var(--primary); 
+            box-shadow: 0 4px 12px rgba(52, 211, 153, 0.15);
+        }
+        .juz-card span { font-weight: 700; display: block; font-size: 1.25rem; margin-bottom: 4px; }
+
+        /* --- MOBILE & TOAST --- */
+        .menu-toggle { display: none; position: fixed; top: 20px; right: 20px; z-index: 999; background: var(--bg-card); backdrop-filter: blur(10px); border: 1px solid var(--border); padding: 12px; border-radius: 10px; color: var(--text-main); box-shadow: var(--shadow-lg); }
+        #toast {
+            visibility: hidden; min-width: 280px; background: #0f172a; color: white;
+            text-align: center; border-radius: 12px; padding: 16px 24px; position: fixed; z-index: 100;
+            right: 30px; bottom: 30px; font-size: 0.95rem; font-weight: 500;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            opacity: 0; transform: translateY(20px); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        #toast.show { visibility: visible; opacity: 1; transform: translateY(0); }
+
+        @media (max-width: 768px) {
+            aside { position: fixed; left: -100%; height: 100%; width: 85%; z-index: 998; box-shadow: var(--shadow-lg); }
+            aside.open { left: 0; }
+            .menu-toggle { display: block; }
+            main { padding: 80px 20px 20px 20px; }
+            .grid-2, .grid-4, .grid-chart { grid-template-columns: 1fr; }
+            .habit-filter { flex-direction: column; align-items: stretch; }
+            .habit-grid { display: block; overflow-x: auto; white-space: nowrap; padding-bottom: 10px; }
+            .habit-grid th, .habit-grid td { display: inline-block; min-width: 40px; }
+            .habit-grid th:first-child, .habit-grid td:first-child { position: static; min-width: 110px; }
+        }
+    </style>
+</head>
+<body>
+    <button class="menu-toggle" onclick="toggleSidebar()">☰ Menu</button>
+
+    <aside id="sidebar">
+        <div class="brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            MASTER PLANNER
+        </div>
+        <nav>
+            <button onclick="showSection('dashboard')" class="active" id="nav-dashboard"><span>📊</span> Dashboard</button>
+            <button onclick="showSection('roadmap')" id="nav-roadmap"><span>⏰</span> Roadmap Harian</button>
+            <button onclick="showSection('weekly')" id="nav-weekly"><span>📅</span> Weekly Planner</button>
+            <button onclick="showSection('habits')" id="nav-habits"><span>🔥</span> Habit Tracker</button>
+            <button onclick="showSection('evaluation')" id="nav-evaluation"><span>📝</span> Evaluasi Diri</button>
+            <button onclick="showSection('hafalan')" id="nav-hafalan"><span>📖</span> Progress Hafalan</button>
+            <button onclick="showSection('finance')" id="nav-finance"><span>💰</span> Keuangan</button>
+            <button onclick="showSection('wealth')" id="nav-wealth"><span>💎</span> Target Kekayaan</button>
+        </nav>
+        <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--text-muted); text-align: center; opacity: 0.6;">
+            V6 Modern Edition
+        </div>
+    </aside>
+
+    <main>
+        <!-- 1. DASHBOARD -->
+        <section id="dashboard" class="section active">
+            <header>
+                <h1 id="greeting">Halo, Pejuang!</h1>
+                <p class="subtitle" id="current-date">Memuat tanggal...</p>
+            </header>
+
+            <div class="grid-4" style="margin-bottom: 30px;">
+                <div class="streak-box">
+                    <div class="streak-number" id="dash-streak">0</div>
+                    <div style="font-size: 0.85rem; font-weight: 600; margin-top: 5px; position: relative; z-index: 2; opacity: 0.9;">HARI STREAK</div>
+                </div>
+                <div class="stat-box">
+                    <h3>Progress Hari Ini</h3>
+                    <p id="dash-today-percent" style="color: var(--primary);">0%</p>
+                    <small id="dash-task-count" style="color: var(--text-muted)">0/13 Tugas</small>
+                </div>
+                <div class="stat-box">
+                    <h3>Total Hafalan</h3>
+                    <p id="dash-hafalan" style="color: var(--gold);">0 Juz</p>
+                </div>
+                <div class="stat-box">
+                    <h3>Saldo Keuangan</h3>
+                    <p id="dash-balance" style="color: var(--text-main); font-size: 1.5rem;">Rp 0</p>
+                </div>
+            </div>
+
+            <div class="card insight-card" id="dash-insight-card" style="display:none; margin-bottom: 30px;">
+                <h3 style="margin-bottom:10px; color:var(--primary); font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path></svg>
+                    Insight Evaluasi Terkini
+                </h3>
+                <p id="dash-eval-text" style="font-size: 1.1rem; font-style: italic; color: var(--text-main); margin-bottom: 10px; line-height: 1.6;">...</p>
+                <small id="dash-eval-meta" style="color: var(--text-muted); font-weight: 600; letter-spacing: 0.05em;">...</small>
+            </div>
+
+            <div class="grid-chart" style="margin-bottom: 30px;">
+                <div class="card">
+                    <h3 style="margin-bottom:15px; font-weight: 600; color: var(--text-main);">📈 Tren Produktivitas (7 Hari)</h3>
+                    <div style="height: 260px; width: 100%;"><canvas id="productivityChart"></canvas></div>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom:15px; font-weight: 600; color: var(--text-main);">📊 Konsistensi Kebiasaan</h3>
+                    <div style="height: 260px; width: 100%;"><canvas id="habitChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="font-weight: 600; color: var(--text-main);">💸 Aliran Keuangan</h3>
+                </div>
+                <div style="height: 220px; width: 100%; max-width: 420px; margin: 0 auto;"><canvas id="financeChart"></canvas></div>
+            </div>
+
+            <div class="card" style="margin-top: 30px;">
+                <h3 style="margin-bottom: 20px; font-weight: 600; color: var(--text-main);">Log Aktivitas Terakhir</h3>
+                <div id="history-log" style="max-height: 250px; overflow-y: auto;"></div>
+            </div>
+        </section>
+
+        <!-- 2. ROADMAP HARIAN -->
+        <section id="roadmap" class="section">
+            <header><h1>Roadmap Harian</h1><p class="subtitle">Centang tugas untuk sinkronisasi otomatis ke Habit Tracker.</p></header>
+            <div class="card" id="roadmap-container" style="padding: 0 24px;"></div>
+        </section>
+
+        <!-- 3. WEEKLY -->
+        <section id="weekly" class="section">
+            <header><h1>Weekly Planner</h1></header>
+            <div class="card"><table class="week-table" id="week-table" style="width:100%; border-collapse: collapse;"></table></div>
+        </section>
+
+        <!-- 4. HABIT TRACKER -->
+        <section id="habits" class="section">
+            <header><h1>Habit Tracker</h1><p class="subtitle">Visualisasi data otomatis dari Roadmap Harian.</p></header>
+            <div class="card">
+                <div class="habit-filter">
+                    <div>
+                        <label style="font-size:0.75rem; color:var(--text-muted); font-weight:700; letter-spacing:0.05em;">TAHUN</label>
+                        <select id="filter-year" onchange="renderHabits()"></select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.75rem; color:var(--text-muted); font-weight:700; letter-spacing:0.05em;">BULAN</label>
+                        <select id="filter-month" onchange="renderHabits()"></select>
+                    </div>
+                </div>
+                <div style="overflow-x: auto;"><table class="habit-grid" id="habit-table"></table></div>
+            </div>
+        </section>
+
+        <!-- 5. EVALUATION -->
+        <section id="evaluation" class="section">
+            <header><h1>Evaluasi Diri</h1><p class="subtitle">Refleksi mendalam untuk pertumbuhan berkelanjutan.</p></header>
+            
+            <div class="card">
+                <div class="eval-tabs">
+                    <button class="eval-tab active" onclick="switchEvalTab('daily')">Harian</button>
+                    <button class="eval-tab" onclick="switchEvalTab('weekly')">Mingguan</button>
+                    <button class="eval-tab" onclick="switchEvalTab('monthly')">Bulanan</button>
+                    <button class="eval-tab" onclick="switchEvalTab('yearly')">Tahunan</button>
+                </div>
+
+                <div id="eval-input-area">
+                    <div style="margin-bottom: 20px; padding: 15px; background: rgba(15, 23, 42, 0.5); border-radius: 10px; border: 1px solid var(--border); display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
+                        <label style="white-space:nowrap; color:var(--text-muted); font-weight:600;">Pilih Periode:</label>
+                        <input type="date" id="eval-date-picker" onchange="loadEvaluationForm()" style="margin-bottom:0; flex:1;">
+                        <span id="eval-period-label" style="color:var(--primary); font-weight:700; font-size:0.9rem; background:var(--primary-glow); padding: 4px 12px; border-radius:20px;"></span>
+                    </div>
+
+                    <div id="eval-questions-container"></div>
+
+                    <button class="btn" style="width:100%; margin-top:20px;" onclick="saveEvaluation()">Simpan Evaluasi</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. HAFALAN -->
+        <section id="hafalan" class="section">
+            <header><h1>Progress Hafalan</h1></header>
+            <div class="card">
+                <div style="margin-bottom:25px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; font-weight:600; color:var(--text-muted);">
+                        <span>TOTAL PROGRESS</span>
+                        <span id="hafalan-percent">0%</span>
+                    </div>
+                    <div style="height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden;">
+                        <div id="hafalan-bar" style="height:100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); width:0%; transition:width 0.5s ease; box-shadow: 0 0 10px var(--primary-glow);"></div>
+                    </div>
+                </div>
+                <div class="juz-list" id="juz-container"></div>
+            </div>
+        </section>
+
+        <!-- 7. FINANCE -->
+        <section id="finance" class="section">
+            <header><h1>Keuangan</h1></header>
+            <div class="grid-2">
+                <div class="card">
+                    <h3 style="margin-bottom:20px; font-weight:600;">Input Transaksi</h3>
+                    <input type="date" id="fin-date">
+                    <select id="fin-type"><option value="income">Pemasukan</option><option value="expense">Pengeluaran</option><option value="invest">Investasi</option></select>
+                    <input type="number" id="fin-amount" placeholder="Nominal">
+                    <input type="text" id="fin-note" placeholder="Catatan transaksi">
+                    <button class="btn" style="width:100%" onclick="addTransaction()">Simpan Transaksi</button>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom:20px; font-weight:600;">Riwayat Transaksi</h3>
+                    <ul id="fin-list" style="list-style:none; max-height:320px; overflow-y:auto; padding-right:5px;"></ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 8. WEALTH -->
+        <section id="wealth" class="section">
+            <header><h1>Target Kekayaan</h1></header>
+            <div class="card">
+                <label style="display:block; margin-bottom:8px; color:var(--text-muted); font-weight:600;">Usia Anda Saat Ini:</label>
+                <input type="number" id="user-age" style="width:120px; display:inline-block;" onchange="renderWealth()">
+                <div id="wealth-container" style="margin-top:30px;"></div>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast">Data Tersimpan</div>
+
+    <script>
+        /* --- 1. CONFIG & STATE --- */
+        const baseRoadmap = [
+            { time: "04.30", activity: "Bangun + doa" }, { time: "05.00", activity: "Hafalan" }, { time: "06.00", activity: "Olahraga + Sarapan" },
+            { time: "07.00", activity: "Belajar Skill" }, { time: "09.00", activity: "Kerja / Bisnis" }, { time: "12.00", activity: "Istirahat" },
+            { time: "13.00", activity: "Kerja Proyek" }, { time: "15.00", activity: "Belajar Investasi" }, { time: "16.00", activity: "Murajaah" },
+            { time: "18.00", activity: "Tilawah" }, { time: "19.00", activity: "Bangun Aset" }, { time: "21.00", activity: "Evaluasi" }, { time: "21.30", activity: "Tidur" }
+        ];
+
+        const roadmapToHabitMap = {
+            0: 0, 1: 4, 2: 1, 3: 2, 7: 3, 8: 5
+        };
+
+        const evalConfig = {
+            daily: { label: "Harian", questions: ["Apa progress terbesar hari ini?", "Apa yang harus diperbaiki?", "Apa rasa syukur hari ini?"] },
+            weekly: { label: "Mingguan", questions: ["Apa highlight minggu ini?", "Skill baru yang dipelajari?", "Kondisi finansial minggu ini?"] },
+            monthly: { label: "Bulanan", questions: ["Apakah target bulan ini tercapai?", "Fokus utama bulan depan?", "Hambatan terbesar bulan ini?"] },
+            yearly: { label: "Tahunan", questions: ["Apa pencapaian terbesar tahun ini?", "Apa target besar tahun depan?", "Apa yang ingin diubah?"] }
+        };
+
+        const defaultState = {
+            lastDate: "", roadmapStatus: Array(13).fill(false), roadmapHistory: {},
+            habits: {}, hafalan: Array(30).fill('belum'), finance: [], wealthAge: 22, weekly: {},
+            evaluations: {}
+        };
+
+        let state = JSON.parse(localStorage.getItem('masterPlannerV6')) || JSON.parse(JSON.stringify(defaultState));
+        let currentEvalType = 'daily';
+
+        // Migration
+        const currentYear = new Date().getFullYear();
+        let needsSave = false;
+        for (const key in state.habits) {
+            const parts = key.split('-');
+            if (parts.length === 3) {
+                const val = state.habits[key];
+                delete state.habits[key];
+                state.habits[`${currentYear}-${key}`] = val;
+                needsSave = true;
+            }
+        }
+        if(needsSave) localStorage.setItem('masterPlannerV6', JSON.stringify(state));
+
+        let prodChartInstance = null; let habitChartInstance = null; let financeChartInstance = null;
+
+        /* --- 2. CORE LOGIC --- */
+        function checkDailyReset() {
+            const today = new Date().toISOString().split('T')[0];
+            if (state.lastDate !== today) {
+                if (state.lastDate !== "") {
+                    const isDirty = state.roadmapStatus.some(s => s === true);
+                    if (isDirty) state.roadmapHistory[state.lastDate] = [...state.roadmapStatus];
+                }
+                state.roadmapStatus = Array(13).fill(false);
+                state.lastDate = today;
+                saveState();
+            }
+        }
+        function saveState() { localStorage.setItem('masterPlannerV6', JSON.stringify(state)); }
+
+        /* --- 3. INITIALIZATION --- */
+        document.addEventListener('DOMContentLoaded', () => {
+            checkDailyReset();
+            updateDate();
+            initHabitFilters();
+            initEvaluationPage();
+            renderRoadmap();
+            renderWeekly();
+            renderHabits();
+            renderHafalan();
+            renderFinance();
+            renderWealth();
+            document.getElementById('fin-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('user-age').value = state.wealthAge;
+            updateDashboard(); 
+        });
+
+        function initHabitFilters() {
+            const yearSelect = document.getElementById('filter-year');
+            const monthSelect = document.getElementById('filter-month');
+            const months = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+            const now = new Date();
+            for(let y = now.getFullYear() - 2; y <= now.getFullYear() + 5; y++) {
+                const opt = document.createElement('option'); opt.value = y; opt.innerText = y; if(y === now.getFullYear()) opt.selected = true; yearSelect.appendChild(opt);
+            }
+            months.forEach((m, i) => {
+                const opt = document.createElement('option'); opt.value = i; opt.innerText = m; if(i === now.getMonth()) opt.selected = true; monthSelect.appendChild(opt);
+            });
+        }
+
+        function initEvaluationPage() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('eval-date-picker').value = today;
+            loadEvaluationForm();
+        }
+
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+            document.getElementById('nav-' + id).classList.add('active');
+            if(window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
+            if(id === 'dashboard') { updateDashboard(); } 
+            if(id === 'habits') { renderHabits(); }
+        }
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+        function updateDate() {
+            const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('current-date').innerText = new Date().toLocaleDateString('id-ID', opts);
+            const h = new Date().getHours();
+            let g = "Selamat Pagi"; if(h >= 10) g = "Selamat Siang"; if(h >= 15) g = "Selamat Sore"; if(h >= 18) g = "Selamat Malam";
+            document.getElementById('greeting').innerText = g + ", Pejuang Sukses!";
+        }
+        function showToast() { const t = document.getElementById('toast'); t.className = "show"; setTimeout(() => t.className = t.className.replace("show", ""), 3000); }
+
+        /* --- 4. ROADMAP & SYNC --- */
+        function renderRoadmap() {
+            const c = document.getElementById('roadmap-container'); c.innerHTML = '';
+            baseRoadmap.forEach((item, i) => {
+                const chk = state.roadmapStatus[i];
+                c.innerHTML += `<div class="timeline-item"><div class="time">${item.time}</div><div class="activity">${item.activity}</div><div class="check-circle ${chk?'checked':''}" onclick="toggleTask(${i})">${chk?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>':''}</div></div>`;
+            });
+        }
+
+        function toggleTask(i) {
+            const isChecked = !state.roadmapStatus[i];
+            state.roadmapStatus[i] = isChecked;
+            const targetHabitIndex = roadmapToHabitMap[i];
+            if (targetHabitIndex !== undefined) {
+                const now = new Date();
+                const y = now.getFullYear(); const m = now.getMonth(); const d = now.getDate();
+                const key = `${y}-${m}-${targetHabitIndex}-${d}`;
+                state.habits[key] = isChecked;
+            }
+            saveState();
+            renderRoadmap();
+            if(document.getElementById('habits').classList.contains('active')) renderHabits();
+            updateDashboard();
+        }
+
+        /* --- 5. EVALUATION --- */
+        function switchEvalTab(type) {
+            currentEvalType = type;
+            document.querySelectorAll('.eval-tab').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            loadEvaluationForm();
+        }
+        function getEvalKey(dateStr, type) {
+            const d = new Date(dateStr);
+            if (type === 'daily') return `daily-${dateStr}`;
+            if (type === 'weekly') {
+                const day = d.getDay(); const diff = d.getDate() - day + (day === 0 ? -6 : 1); const monday = new Date(d.setDate(diff));
+                return `weekly-${monday.toISOString().split('T')[0]}`;
+            }
+            if (type === 'monthly') return `monthly-${d.getFullYear()}-${d.getMonth()}`;
+            if (type === 'yearly') return `yearly-${d.getFullYear()}`;
+            return '';
+        }
+        function loadEvaluationForm() {
+            const dateVal = document.getElementById('eval-date-picker').value;
+            const key = getEvalKey(dateVal, currentEvalType);
+            const savedData = state.evaluations[key] || {};
+            const questions = evalConfig[currentEvalType].questions;
+            const container = document.getElementById('eval-questions-container');
+            container.innerHTML = '';
+            let label = dateVal;
+            if(currentEvalType === 'weekly') label = `Minggu mulai ${dateVal}`;
+            if(currentEvalType === 'monthly') label = new Date(dateVal).toLocaleDateString('id-ID', { month:'long', year:'numeric' });
+            if(currentEvalType === 'yearly') label = `Tahun ${new Date(dateVal).getFullYear()}`;
+            document.getElementById('eval-period-label').innerText = `(${label})`;
+            questions.forEach((q, idx) => {
+                const div = document.createElement('div');
+                div.innerHTML = `<label style="display:block; margin-bottom:8px; color:var(--text-muted); font-size:0.9rem; font-weight:600;">${q}</label><textarea id="eval-q-${idx}" rows="3" style="font-family: inherit;">${savedData[`q${idx}`] || ''}</textarea>`;
+                container.appendChild(div);
+            });
+        }
+        function saveEvaluation() {
+            const dateVal = document.getElementById('eval-date-picker').value;
+            const key = getEvalKey(dateVal, currentEvalType);
+            const questions = evalConfig[currentEvalType].questions;
+            const data = {};
+            questions.forEach((_, idx) => { data[`q${idx}`] = document.getElementById(`eval-q-${idx}`).value; });
+            state.evaluations[key] = data;
+            saveState();
+            showToast();
+            updateDashboard();
+        }
+        function getLatestEvaluationForDashboard() {
+            const keys = Object.keys(state.evaluations);
+            if(keys.length === 0) return null;
+            keys.sort().reverse();
+            const lastKey = keys[0]; const data = state.evaluations[lastKey];
+            let type = lastKey.split('-')[0]; let datePart = lastKey.substring(type.length + 1);
+            let displayDate = datePart;
+            if(type === 'daily') displayDate = new Date(datePart).toLocaleDateString('id-ID', {day:'numeric', month:'short'});
+            if(type === 'weekly') displayDate = `Minggu ${new Date(datePart).toLocaleDateString('id-ID', {day:'numeric', month:'short'})}`;
+            if(type === 'monthly') { const [y, m] = datePart.split('-'); displayDate = new Date(y, m).toLocaleDateString('id-ID', {month:'long', year:'numeric'}); }
+            if(type === 'yearly') displayDate = `Tahun ${datePart}`;
+            let insight = "Tidak ada catatan detail.";
+            for(let i=0; i<10; i++) { if(data[`q${i}`] && data[`q${i}`].trim() !== "") { insight = data[`q${i}`]; break; } }
+            return { text: insight, meta: `${evalConfig[type].label} - ${displayDate}` };
+        }
+
+        /* --- 6. DASHBOARD & CHARTS --- */
+        function updateDashboard() {
+            const done = state.roadmapStatus.filter(Boolean).length;
+            const pct = Math.round((done / 13) * 100);
+            document.getElementById('dash-today-percent').innerText = pct + "%";
+            document.getElementById('dash-task-count').innerText = `${done}/13 Tugas`;
+
+            let streak = 0;
+            let checkDate = new Date(); checkDate.setDate(checkDate.getDate() - 1);
+            for(let i=0; i<365; i++) {
+                const dStr = checkDate.toISOString().split('T')[0];
+                if(state.roadmapHistory[dStr]) {
+                    if(state.roadmapHistory[dStr].filter(Boolean).length >= 6) streak++; else break;
+                } else break;
+                checkDate.setDate(checkDate.getDate() - 1);
+            }
+            document.getElementById('dash-streak').innerText = streak;
+
+            const hDone = state.hafalan.filter(x => x === 'selesai').length;
+            document.getElementById('dash-hafalan').innerText = `${hDone}/30 Juz`;
+            let bal = 0;
+            state.finance.forEach(f => { if(f.type === 'income') bal += f.amount; else if(f.type === 'expense') bal -= f.amount; });
+            document.getElementById('dash-balance').innerText = "Rp " + bal.toLocaleString('id-ID');
+
+            const historyEl = document.getElementById('history-log'); historyEl.innerHTML = '';
+            Object.keys(state.roadmapHistory).sort().reverse().slice(0, 5).forEach(d => {
+                const c = state.roadmapHistory[d].filter(Boolean).length;
+                const p = Math.round((c/13)*100);
+                historyEl.innerHTML += `<div class="history-item" style="padding:12px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; font-size:0.9rem; align-items:center;">
+                    <span style="font-weight:500;">${d}</span> <span style="padding:4px 10px; border-radius:10px; font-size:0.8rem; font-weight:700; background:${p>=50?'rgba(52,211,153,0.1)':'rgba(239,68,68,0.1)'}; color:${p>=50?'var(--primary)':'#ef4444'}">${p}% Selesai</span>
+                </div>`;
+            });
+
+            const lastEval = getLatestEvaluationForDashboard();
+            const card = document.getElementById('dash-insight-card');
+            if(lastEval) {
+                card.style.display = 'block';
+                document.getElementById('dash-eval-text').innerText = `"${lastEval.text}"`;
+                document.getElementById('dash-eval-meta').innerText = lastEval.meta;
+            } else { card.style.display = 'none'; }
+
+            renderProductivityChart(); renderHabitChart(); renderFinanceChart();
+        }
+
+        function renderProductivityChart() {
+            const ctx = document.getElementById('productivityChart').getContext('2d');
+            const labels = []; const dataPoints = [];
+            for(let i=6; i>=0; i--) {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                const dStr = d.toISOString().split('T')[0];
+                labels.push(d.toLocaleDateString('id-ID', {weekday:'short'}));
+                let pct = 0;
+                if(dStr === state.lastDate) { pct = Math.round((state.roadmapStatus.filter(Boolean).length/13)*100); }
+                else if(state.roadmapHistory[dStr]) { pct = Math.round((state.roadmapHistory[dStr].filter(Boolean).length/13)*100); }
+                dataPoints.push(pct);
+            }
+            if(prodChartInstance) prodChartInstance.destroy();
+            prodChartInstance = new Chart(ctx, {
+                type: 'line', data: { labels: labels, datasets: [{ label: 'Produktivitas', data: dataPoints, borderColor: '#34d399', backgroundColor: (context) => { const bg = context.chart.ctx.createLinearGradient(0,0,0,300); bg.addColorStop(0, 'rgba(52,211,153,0.5)'); bg.addColorStop(1, 'rgba(52,211,153,0)'); return bg; }, fill: true, tension: 0.4, pointBackgroundColor: '#0f172a', pointBorderColor: '#34d399', pointBorderWidth: 2, pointRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } }
+            });
+        }
+
+        function renderHabitChart() {
+            const ctx = document.getElementById('habitChart').getContext('2d');
+            const habits = ["Bangun Pagi", "Olahraga", "Belajar", "Investasi", "Hafalan", "Murajaah"];
+            const counts = [0,0,0,0,0,0];
+            const now = new Date(); const currentMonth = now.getMonth(); const currentYear = now.getFullYear(); const todayDate = now.getDate();
+            habits.forEach((h, idx) => {
+                for(let d=1; d<=todayDate; d++) {
+                    const key = `${currentYear}-${currentMonth}-${idx}-${d}`;
+                    if(state.habits[key]) counts[idx]++;
+                }
+            });
+            if(habitChartInstance) habitChartInstance.destroy();
+            habitChartInstance = new Chart(ctx, {
+                type: 'bar', data: { labels: habits, datasets: [{ label: 'Hari', data: counts, backgroundColor: ['#34d399', '#60a5fa', '#818cf8', '#fbbf24', '#f472b6', '#a78bfa'], borderRadius: 6, barThickness: 20 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', stepSize: 1 } }, x: { grid: { display: false }, ticks: { color: '#94a3b8', font: {size: 10} } } } }
+            });
+        }
+
+        function renderFinanceChart() {
+            const ctx = document.getElementById('financeChart').getContext('2d');
+            const currentMonth = new Date().getMonth(); const currentYear = new Date().getFullYear();
+            let income = 0, expense = 0;
+            state.finance.forEach(f => {
+                const d = new Date(f.date);
+                if(d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                    if(f.type === 'income') income += f.amount;
+                    if(f.type === 'expense') expense += f.amount;
+                }
+            });
+            if(financeChartInstance) financeChartInstance.destroy();
+            financeChartInstance = new Chart(ctx, {
+                type: 'doughnut', data: { labels: ['Pemasukan', 'Pengeluaran'], datasets: [{ data: [income, expense], backgroundColor: ['#34d399', '#f87171'], borderWidth: 0, hoverOffset: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { color: '#cbd5e1', padding: 20, usePointStyle: true, pointStyle: 'circle' } } } }
+            });
+        }
+
+        /* --- 7. HABIT TRACKER --- */
+        const hList = ["Bangun Pagi","Olahraga","Belajar","Investasi","Hafalan","Murajaah"];
+        function renderHabits() {
+            const year = parseInt(document.getElementById('filter-year').value);
+            const month = parseInt(document.getElementById('filter-month').value);
+            const t = document.getElementById('habit-table');
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            t.innerHTML = `<thead><tr><th>Habit</th>${Array.from({length:daysInMonth},(_,i)=>`<th>${i+1}</th>`).join('')}</tr></thead><tbody></tbody>`;
+            hList.forEach((h, hi) => {
+                let row = `<tr><td>${h}</td>`;
+                for(let d=1; d<=daysInMonth; d++) {
+                    const key = `${year}-${month}-${hi}-${d}`;
+                    const done = state.habits[key] || false;
+                    row += `<td><div class="habit-cell ${done?'done':''}"></div></td>`;
+                }
+                row += '</tr>'; t.querySelector('tbody').innerHTML += row;
+            });
+        }
+
+        /* --- 8. OTHER MODULES --- */
+        function renderWeekly() {
+            const days = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Ahad'];
+            const t = document.getElementById('week-table');
+            t.innerHTML = `<thead><tr><th style="padding:12px; border-bottom:1px solid var(--border);">Hari</th><th style="padding:12px; border-bottom:1px solid var(--border);">Fokus</th><th style="padding:12px; border-bottom:1px solid var(--border);">Target</th></tr></thead><tbody></tbody>`;
+            days.forEach((d, i) => {
+                t.querySelector('tbody').innerHTML += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:12px; font-weight:600;">${d}</td><td style="padding:12px;"><input id="w-${i}-0" value="${state.weekly[`w-${i}-0`]||''}" oninput="state.weekly[this.id]=this.value;saveState()" style="margin:0; border:none; background:transparent; padding:0;"></td><td style="padding:12px;"><input id="w-${i}-1" value="${state.weekly[`w-${i}-1`]||''}" oninput="state.weekly[this.id]=this.value;saveState()" style="margin:0; border:none; background:transparent; padding:0;"></td></tr>`;
+            });
+        }
+        function renderHafalan() {
+            const c = document.getElementById('juz-container'); c.innerHTML = '';
+            let done = 0;
+            state.hafalan.forEach((s, i) => {
+                if(s==='selesai') done++;
+                c.innerHTML += `<div class="juz-card ${s==='selesai'?'done':''}" onclick="state.hafalan[i]=state.hafalan[i]==='selesai'?'belum':'selesai';saveState();renderHafalan();updateDashboard();"><span>Juz ${i+1}</span><small style="font-weight:600; font-size:0.75rem;">${s.toUpperCase()}</small></div>`;
+            });
+            const p = Math.round((done/30)*100);
+            document.getElementById('hafalan-percent').innerText = p+"%";
+            document.getElementById('hafalan-bar').style.width = p+"%";
+        }
+        function addTransaction() {
+            const d = document.getElementById('fin-date').value;
+            const a = parseInt(document.getElementById('fin-amount').value);
+            if(!d || !a) return;
+            state.finance.push({date:d, type:document.getElementById('fin-type').value, amount:a, note:document.getElementById('fin-note').value});
+            saveState(); renderFinance(); updateDashboard();
+            document.getElementById('fin-amount').value = '';
+        }
+        function renderFinance() {
+            const l = document.getElementById('fin-list'); l.innerHTML = '';
+            [...state.finance].reverse().forEach(f => {
+                l.innerHTML += `<li style="padding:12px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;"><div><div style="font-weight:700; margin-bottom:2px; color:${f.type==='income'?'var(--primary)':'#f87171'}">${f.type==='income'?'+':'-'} Rp ${f.amount.toLocaleString('id-ID')}</div><div style="font-size:0.8rem; color:var(--text-muted);">${f.note}</div></div><small style="color:var(--text-muted); font-weight:600;">${f.date}</small></li>`;
+            });
+        }
+        function renderWealth() {
+            state.wealthAge = parseInt(document.getElementById('user-age').value) || 22; saveState();
+            const targets = [{a:22,t:"Mulai Investasi"},{a:25,t:"1 Miliar"},{a:30,t:"10 Miliar"},{a:35,t:"35 Miliar"},{a:40,t:"90 Miliar"},{a:50,t:"300 Miliar"}];
+            const c = document.getElementById('wealth-container'); c.innerHTML = '';
+            targets.forEach(x => {
+                const passed = state.wealthAge >= x.a;
+                c.innerHTML += `<div style="padding:16px; margin-bottom:12px; border-radius:12px; background:rgba(15,23,42,0.5); border-left:4px solid ${passed?'var(--gold)':'#334155'}; display:flex; justify-content:space-between; align-items:center;"><span style="font-weight:700;">Usia ${x.a}</span> <span style="font-weight:600; color:${passed?'var(--gold)':'var(--text-muted)'}">${x.t} ${passed?'✔':''}</span></div>`;
+            });
+        }
+    </script>
+</body>
+</html>
